@@ -1,0 +1,8 @@
+.config/
+.local/
+Desktop/
+Pictures/
+item-identification/
+*.pt
+dtoverlay=ov5647
+item-identification/
