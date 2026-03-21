@@ -1,8 +1,4 @@
-.config/
-.local/
-Desktop/
-Pictures/
-item-identification/
-*.pt
-dtoverlay=ov5647
-item-identification/
+.cache/
+.ollama/
+__pycache__/
+*.pyc
