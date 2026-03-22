@@ -10,7 +10,7 @@ ENERGY_THRESHOLD  = 300
 PAUSE_THRESHOLD   = 0.8
 PHRASE_TIME_LIMIT = 10
 AMBIENT_DURATION  = 1
-
+#Test
 # TTS settings — change voice to "en-us" if you prefer American accent
 TTS_VOICE  = "en-gb"   # british english — sounds great on Pi!
 TTS_SPEED  = 150       # words per minute (120 = slower, 180 = faster)
