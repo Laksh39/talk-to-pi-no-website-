@@ -4,7 +4,6 @@ import subprocess
 import re
 
 # ── Config ────────────────────────────────────────────────────────────────────
-WAKE_WORD         = "computer"
 OLLAMA_URL        = "http://localhost:11434/api/generate"
 OLLAMA_MODEL      = "gemma3:1b"
 ENERGY_THRESHOLD  = 300
@@ -26,16 +25,15 @@ recognizer.dynamic_energy_threshold = True
 
 def clean_reply(text: str) -> str:
     """Strip markdown formatting so the reply reads naturally."""
-    text = re.sub(r"\*{1,3}(.+?)\*{1,3}", r"\1", text)  # **bold**, *italic*, ***both***
-    text = re.sub(r"`{1,3}(.+?)`{1,3}", r"\1", text)     # `code` and ```blocks```
-    text = re.sub(r"#{1,6}\s*", "", text)                 # ## headings
-    text = re.sub(r"^\s*[-•]\s+", "", text, flags=re.M)   # bullet points
-    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.M)  # numbered lists
-    text = re.sub(r"\[(.+?)\]\(.+?\)", r"\1", text)       # [links](url)
-    text = re.sub(r"\n{2,}", " ", text)                    # collapse blank lines
-    text = re.sub(r"\s+", " ", text).strip()              # tidy whitespace
+    text = re.sub(r"\*{1,3}(.+?)\*{1,3}", r"\1", text)
+    text = re.sub(r"`{1,3}(.+?)`{1,3}", r"\1", text)
+    text = re.sub(r"#{1,6}\s*", "", text)
+    text = re.sub(r"^\s*[-•]\s+", "", text, flags=re.M)
+    text = re.sub(r"^\s*\d+\.\s+", "", text, flags=re.M)
+    text = re.sub(r"\[(.+?)\]\(.+?\)", r"\1", text)
+    text = re.sub(r"\n{2,}", " ", text)
+    text = re.sub(r"\s+", " ", text).strip()
     return text
-
 
 
 def speak(text: str):
@@ -43,16 +41,21 @@ def speak(text: str):
     print(f"🔊 {text}")
     subprocess.run(
         ["espeak", "-v", TTS_VOICE, "-s", str(TTS_SPEED), "-p", str(TTS_PITCH), text],
-        stderr=subprocess.DEVNULL  # suppress ALSA noise in terminal
+        stderr=subprocess.DEVNULL
     )
 
 
 def ask_ollama(prompt: str) -> str:
-    """Send a prompt to Ollama and return the response text."""
+    """Send a prompt to Ollama and return a short, spoken-word response."""
+    wrapped = (
+        "You are a voice assistant. Answer in 1-2 sentences maximum. "
+        "Be direct and conversational. No lists, no markdown, no bullet points. "
+        f"Question: {prompt}"
+    )
     try:
         response = requests.post(
             OLLAMA_URL,
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False},
+            json={"model": OLLAMA_MODEL, "prompt": wrapped, "stream": False},
             timeout=30,
         )
         response.raise_for_status()
@@ -87,11 +90,11 @@ def listen_once(mic: sr.Microphone) -> str | None:
 def main():
     print("🤖  Pi Voice Assistant  —  Gemma 3:1b + espeak")
     print("─" * 50)
-    print(f'Wake word : "{WAKE_WORD}"')
-    print(f'Voice     : {TTS_VOICE} at {TTS_SPEED} wpm')
+    print(f'Voice : {TTS_VOICE} at {TTS_SPEED} wpm')
+    print("Listening to everything — no wake word needed.")
     print("Press Ctrl+C to quit.\n")
 
-    speak("Pi assistant is ready. Say computer and then your question to wake me up.")
+    speak("Pi assistant is ready. Just speak and I will respond.")
 
     with sr.Microphone() as mic:
         print(f"Calibrating for background noise ({AMBIENT_DURATION}s) …")
@@ -100,36 +103,18 @@ def main():
 
         while True:
             try:
-                # ── Step 1: Listen for wake word ──────────────────────────
+                # ── Listen for anything ───────────────────────────────────
                 text = listen_once(mic)
-                if text is None:
+                if not text:
                     continue
 
-                print(f"Heard: '{text}'")
+                print(f"\n💬 You : {text}")
 
-                if WAKE_WORD not in text:
-                    print("  (no wake word — ignoring)\n")
-                    continue
-
-                # ── Step 2: Extract command after the wake word ───────────
-                command = text.split(WAKE_WORD, 1)[-1].strip()
-
-                if not command:
-                    speak("Yes? What is your question?")
-                    command = listen_once(mic)
-                    if not command:
-                        speak("I did not hear anything. Please try again.")
-                        continue
-                    print(f"  Question: {command}")
-
-                print(f"\n💬 You : {command}")
-
-                # ── Step 3: Send to Ollama ────────────────────────────────
+                # ── Send straight to Ollama ───────────────────────────────
                 print("🧠 Thinking …")
-                speak("Let me think about that.")
-                reply = ask_ollama(command)
+                reply = ask_ollama(text)
 
-                # ── Step 4: Clean, print and speak the reply ─────────────
+                # ── Clean, print and speak the reply ─────────────────────
                 reply = clean_reply(reply)
                 print(f"🤖 Pi  : {reply}\n")
                 speak(reply)
